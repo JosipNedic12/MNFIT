@@ -28,24 +28,37 @@ function getWeekRange(date) {
 async function assertWeeklyLimit(userId, termStartsAt, termIdToIgnore = null) {
   const { weekStart, weekEnd } = getWeekRange(new Date(termStartsAt));
 
-  const weekTerms = await Term.find({
-    startsAt: { $gte: weekStart, $lt: weekEnd }
-  }).select({ _id: 1 }).lean();
-
-  const weekTermIds = weekTerms.map(t => t._id);
-
-  const q = {
-    userId,
-    status: 'active',
-    termId: { $in: weekTermIds }
+  const matchBookings = {
+    userId: new mongoose.Types.ObjectId(String(userId)),
+    status: 'active'
   };
 
-  // ako reaktiviraš isti booking za isti term, ignoriraj ga u countu
-  if (termIdToIgnore) q.termId = { $in: weekTermIds.filter(id => String(id) !== String(termIdToIgnore)) };
+  // ako reaktiviraš isti booking, ignoriraj ga u countu
+  if (termIdToIgnore) {
+    matchBookings.termId = { $ne: new mongoose.Types.ObjectId(String(termIdToIgnore)) };
+  }
 
-  const activeThisWeek = await Booking.countDocuments(q);
+  const rows = await Booking.aggregate([
+    { $match: matchBookings },
+    {
+      $lookup: {
+        from: 'terms',
+        localField: 'termId',
+        foreignField: '_id',
+        as: 'term'
+      }
+    },
+    { $unwind: '$term' },
+    {
+      $match: {
+        'term.startsAt': { $gte: weekStart, $lt: weekEnd }
+      }
+    },
+    { $count: 'cnt' }
+  ]);
 
-  if (activeThisWeek >= MAX_PER_WEEK) {
+  const cnt = rows[0]?.cnt ?? 0;
+  if (cnt >= MAX_PER_WEEK) {
     const err = new Error(`Weekly limit reached (${MAX_PER_WEEK})`);
     err.statusCode = 409;
     throw err;
@@ -110,12 +123,23 @@ router.post('/', auth, softAuth, async (req, res, next) => {
   }
 });
 
-/* -------------------- USER CANCEL (po termId) -------------------- */
+// USER CANCEL (po termId) - dozvoljeno samo dok je term scheduled
 router.post('/cancel-by-term/:termId', auth, softAuth, async (req, res, next) => {
   try {
     const { termId } = req.params;
-    if (!mongoose.isValidObjectId(termId)) return res.status(400).json({ error: 'Invalid termId' });
+    if (!mongoose.isValidObjectId(termId)) {
+      return res.status(400).json({ error: 'Invalid termId' });
+    }
 
+    // 1) provjeri term status
+    const term = await Term.findById(termId).select({ status: 1 }).lean();
+    if (!term) return res.status(404).json({ error: 'Term not found' });
+
+    if (term.status !== 'scheduled') {
+      return res.status(409).json({ error: `Cannot cancel booking (${term.status})` });
+    }
+
+    // 2) nađi aktivni booking i otkaži
     const booking = await Booking.findOne({ termId, userId: req.user._id, status: 'active' });
     if (!booking) return res.status(404).json({ error: 'Active booking not found' });
 
@@ -124,9 +148,10 @@ router.post('/cancel-by-term/:termId', auth, softAuth, async (req, res, next) =>
     await booking.save();
 
     res.json({ booking });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
-
 // GET /bookings/mine (aktivni bookinzi + populated term + trainer)
 router.get('/mine', auth, softAuth, async (req, res, next) => {
   try {
@@ -141,8 +166,8 @@ router.get('/mine', auth, softAuth, async (req, res, next) => {
         }
       })
       .lean();
-
-    res.json({ bookings });
+const visible = bookings.filter(b => b.termId && b.termId.status === 'scheduled');
+    res.json({ bookings: visible });
   } catch (e) { next(e); }
 });
 

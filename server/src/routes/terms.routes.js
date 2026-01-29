@@ -8,7 +8,7 @@ import requireRole from '../middleware/requireRole.js';
 
 const router = Router();
 
-/** overlap: existing.startsAt < newEndsAt && existing.endsAt > newStartsAt */
+
 async function hasOverlap({ startsAt, endsAt, excludeId = null }) {
   const q = {
     status: 'scheduled',
@@ -30,16 +30,19 @@ router.get('/', auth, async (req, res, next) => {
   try {
     const now = new Date();
 
-    // auto-finish čim prođe startsAt
     await Term.updateMany(
       { status: 'scheduled', startsAt: { $lte: now } },
       { $set: { status: 'finished' } }
     );
 
-    const terms = await Term.find(/* filter */)
-      .populate('trainerId', 'firstName lastName')
-      .sort({ startsAt: 1 })
-      .lean();
+const terms = await Term.find({
+  status: 'scheduled',
+  startsAt: { $gt: now }  
+})
+.populate('trainerId', 'firstName lastName')
+.sort({ startsAt: 1 })
+.lean();
+
 
     const termIds = terms.map(t => t._id);
     const counts = await Booking.aggregate([
