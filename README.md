@@ -19,7 +19,7 @@ MNFIT je web aplikacija za vođenje termina u teretani, s ulogama korisnika, rez
 
 ---
 
-## 🚀 Tehnologije
+##  Tehnologije
 
 ### Backend
 - Node.js, Express 5
@@ -37,7 +37,7 @@ MNFIT je web aplikacija za vođenje termina u teretani, s ulogama korisnika, rez
 
 ---
 
-## ✨ Funkcionalnosti
+##  Funkcionalnosti
 
 - ✅ Registracija i prijava korisnika (session, HTTP-only cookie)
 - ✅ Različite **uloge**: `member`, `subscriber`, `trainer`, `admin`
@@ -55,7 +55,7 @@ MNFIT je web aplikacija za vođenje termina u teretani, s ulogama korisnika, rez
 
 ---
 
-## 📁 Struktura projekta
+##  Struktura projekta
 - server/
 - ├── index.js
 - ├── package.json
@@ -114,7 +114,7 @@ MNFIT je web aplikacija za vođenje termina u teretani, s ulogama korisnika, rez
 
 ---
 
-## ⚙️ Backend
+##  Backend
 
 ### Konfiguracija
 
@@ -126,7 +126,7 @@ MONGODB_URI=mongodb://localhost:27017/mnfit
 SESSION_SECRET=some-long-secret
 CLIENT_ORIGIN=http://localhost:4200
 ```
-## ⚙️ Pokretanje
+##  Pokretanje
 
 ### Backend
 ```
@@ -177,7 +177,7 @@ Idi na http://localhost:4200
 
 ---
 
-## 📌 Napomene
+##  Napomene
 
 - URL-ovi API-ja su hardkodirani na http://localhost:3001 u servisima (AuthService, TermsService, BookingService, AdminService)
 - Session se prenosi preko HTTP-only cookie-ja; na frontend-u je bitan withCredentials (riješeno interceptorom)
@@ -189,7 +189,7 @@ Idi na http://localhost:4200
 
 ---
 
-## 📄 Licenca
+##  Licenca
 
 Ovaj projekt je izrađen u svrhu učenja i demonstracije. Možeš ga slobodno koristiti, modificirati i širiti.
 
